@@ -1,0 +1,232 @@
+default namespace dnd = "http://alanquatermain.me/dnd/schema"
+
+include "./datatypes.rnc"
+
+# Some general types
+dnd.description = element description { dnd.paragraph* & dnd.list* & dnd.table* & dnd.creature* & dnd.callout* & dnd.footnote? }
+
+dnd.textual = ( text | element em { text } | element ref { text } | dnd.footnoteref )*
+dnd.paragraph = element p { dnd.textual }
+dnd.callout = element callout { dnd.title?, dnd.paragraph+ }
+
+dnd.list = element \list {
+  element listitem { dnd.textual }+,
+  dnd.footnote?,
+	attribute type { "indent", "bullet", "number", "letter", "small", "roman", "smallroman" }?
+}
+dnd.table = element table {
+  dnd.title?,
+  element header { dnd.table.cell+ },
+  element row { dnd.table.cell+ }+,
+  dnd.footnote?
+}
+dnd.table.cell = element cell { dnd.textual }
+
+dnd.title = element title { text }
+dnd.footnote = element footnote {
+  text,
+  attribute mark { text }
+}
+dnd.footnoteref = element fn {
+  text
+}
+dnd.time.unit = attribute unit { dnd.time.unit.values }
+dnd.time.unit.values = ("action" | "round" | "turn" | "second" | "minute" | "hour" | "day")
+
+dnd.die.attr = attribute die { dnd.die.values }
+dnd.die.values = ( '2' | '3' | '4' | '6' | '8' | '10' | '12' | '20' | '100' )
+
+dnd.alignment = element alignment { dnd.alignment.values }
+dnd.alignment.values = ("lawful good" | "neutral good" | "chaotic good" | "lawful neutral" | "neutral" | "chaotic neutral" | "lawful evil" | "neutral evil" | "chaotic evil" | "unaligned")
+
+# The document root
+start = element document { dnd.document.attlist & dnd.document.content }
+
+dnd.document.attlist &= dnd.version.attr
+dnd.version.attr = attribute version { '0.1' }
+
+dnd.document.content = dnd.spells? & dnd.items? & dnd.lookups? & dnd.creatures?
+
+# Spell data
+
+dnd.spells = element spells { dnd.spell+ }
+dnd.spell = element spell { dnd.spell.attlist & dnd.spell.content }
+
+dnd.spell.attlist &= dnd.spell.ritual.attr? & dnd.spell.verbal.attr? & dnd.spell.somatic.attr?
+dnd.spell.ritual.attr = attribute ritual { datatype.boolean }
+dnd.spell.verbal.attr = attribute verbal { datatype.boolean }
+dnd.spell.somatic.attr = attribute somatic { datatype.boolean }
+
+dnd.spell.content = dnd.title & dnd.spell.level & dnd.spell.school & dnd.spell.class+ & dnd.spell.castingtime & dnd.spell.range & dnd.spell.duration & dnd.spell.materials? & dnd.description 
+
+dnd.spell.level = element level { datatype.spelllevel }
+
+dnd.spell.school = element school { dnd.spell.school.values }
+dnd.spell.school.values = ("abjuration" | "conjuration" | "divination" | "enchantment" | "evocation" | "illusion" | "necromancy" | "transmutation")
+
+dnd.spell.class = element class { dnd.spell.class.values }
+dnd.spell.class.values = ("bard" | "cleric" | "druid" | "paladin" | "ranger" | "sorcerer" | "warlock" | "wizard")
+
+dnd.spell.castingtime = element castingtime { dnd.time.unit?, dnd.spell.castingtime.content }
+dnd.spell.castingtime.content = (datatype.non-negative.integer | "instantaneous")
+
+dnd.spell.range = element range { dnd.spell.range.unit?, dnd.spell.range.content }
+dnd.spell.range.unit = attribute unit { "foot" | "yard" | "mile" }
+dnd.spell.range.content = (datatype.non-negative.integer | "touch" | "self")
+
+dnd.spell.duration = element duration {
+	text,
+	attribute concentration { datatype.boolean }?
+}
+dnd.spell.materials = element materials { text }
+
+# Magic items
+
+dnd.items = element items { dnd.item+ }
+dnd.item = element item { dnd.item.attlist & dnd.item.content }
+
+dnd.item.attlist &= dnd.item.rarity.attr & dnd.item.attunement.attr? & dnd.item.attunement.restrictions.attr?
+dnd.item.rarity.attr = attribute rarity { dnd.item.rarity.values }
+dnd.item.rarity.values = ("common" | "uncommon" | "rare" | "very rare" | "legendary" | "artifact" | "varies")
+
+dnd.item.attunement.attr = attribute requiresAttunement { datatype.boolean }
+dnd.item.attunement.restrictions.attr = attribute restrictions { text }
+
+dnd.item.content = dnd.title & dnd.item.type & dnd.description 
+dnd.item.type = element type {
+  ("armor" | "potion" | "ring" | "rod" | "scroll" | "staff" | "wand" | "weapon" | "wondrous item"),
+  attribute otherInfo { text }?
+}
+
+# Lookup tables
+
+dnd.lookups = element lookups { dnd.lookup+ }
+dnd.lookup = element lookup { dnd.lookup.attrlist & dnd.lookup.content }
+
+dnd.lookup.attrlist &= dnd.die.attr
+dnd.lookup.content = dnd.title, dnd.lookup.row+, dnd.lookup.column+, dnd.description?
+
+dnd.lookup.row = element row {
+  attribute startRange { datatype.positive.integer },
+  attribute endRange { datatype.positive.integer },
+  empty
+}
+
+dnd.lookup.column = element column { dnd.title & dnd.lookup.result+ }
+dnd.lookup.result = (dnd.result.coinage | dnd.description | dnd.result.item | dnd.result.roll)
+
+dnd.result.coinage = element coinage {
+  attribute denomination { "cp" | "sp" | "ep" | "gp" | "pp" },
+  (
+    (dnd.die.attr,
+      attribute quantity { datatype.positive.integer }?,
+      attribute multiplier { datatype.positive.integer }?
+    )|
+    (attribute amount { datatype.positive.integer })
+  ),
+  empty
+}
+
+dnd.result.item = element item {
+  attribute name { text }
+}
+
+dnd.result.roll = element roll {
+  attribute name { text },
+  dnd.die.attr,
+  attribute quantity { datatype.positive.integer }?
+}
+
+# Creature data
+
+dnd.creatures = element creatures { dnd.creature+ }
+dnd.creature = element creature { dnd.creature.attrlist, dnd.creature.content }
+
+dnd.creature.attrlist &= dnd.creature.type.attr, dnd.creature.size.attr, dnd.creature.subtype.attr?
+dnd.creature.content = dnd.title & dnd.alignment & dnd.armorclass & dnd.hitpoints & dnd.speed & dnd.statblock & dnd.savingthrow? & dnd.skill* & dnd.dmg-vulnerability* & dnd.dmg-resistance* & dnd.dmg-immunity* & dnd.status-immunity* & dnd.senses & dnd.language* & dnd.challenge & dnd.traits? & dnd.actions? & dnd.reactions? & dnd.legendary-actions? & dnd.description?
+
+dnd.creature.type.attr = attribute type { "aberration" | "beast" | "celestial" | "construct" | "dragon" | "elemental" | "fey" | "fiend" | "giant" | "humanoid" | "monstrosity" | "ooze" | "plant" | "undead" }
+dnd.creature.size.attr = attribute size { "tiny" | "small" | "medium" | "large" | "huge" | "gargantuan" }
+dnd.creature.subtype.attr = attribute subtype { text }
+
+dnd.armorclass = element ac {
+  datatype.non-negative.integer,
+  attribute type { text }?
+}
+
+## Note that summoned monsters can have e.g. "half the hit points of its summoner"
+dnd.hitpoints = element hp {
+  text,
+  attribute roll { text }?
+}
+
+dnd.speed = element speed {
+  text,
+  attribute fly { text }?,
+  attribute hover { datatype.boolean }?,
+  attribute swim { text }?,
+  attribute spiderclimb { text }?
+}
+
+dnd.statblock = element statblock {
+  attribute str { datatype.positive.integer },
+  attribute dex { datatype.positive.integer },
+  attribute con { datatype.positive.integer },
+  attribute int { datatype.positive.integer },
+  attribute wis { datatype.positive.integer },
+  attribute cha { datatype.positive.integer }
+}
+
+dnd.savingthrow = element saves {
+  attribute str { datatype.positive.integer }?,
+  attribute dex { datatype.positive.integer }?,
+  attribute con { datatype.positive.integer }?,
+  attribute int { datatype.positive.integer }?,
+  attribute wis { datatype.positive.integer }?,
+  attribute cha { datatype.positive.integer }?
+}
+
+dnd.skill = element skill {
+  datatype.integer,
+  attribute name { "acrobatics" | "animal handling" | "arcana" | "athletics" | "deception" | "history" | "insight" | "intimidation" | "investigation" | "medicine" | "nature" | "perception" | "performance" | "persuasion" | "religion" | "sleight of hand" | "stealth" | "survival" }
+}
+
+dnd.dmg-vulnerability = element vulnerable { text }
+dnd.dmg-resistance = element dmgresist { text }
+dnd.dmg-immunity = element dmgimmune { text }
+dnd.status-immunity = element statimmune { text }
+
+dnd.senses = element senses {
+  element sense {
+    datatype.positive.integer,
+    attribute name { "darkvision" | "blindsight" | "tremorsense" | "truesight" }
+  }*,
+  attribute perception { datatype.positive.integer }
+}
+
+dnd.language = element language { text }
+
+dnd.challenge = element challenge {
+  (xsd:nonNegativeInteger { maxInclusive = '30' } | "1/8" | "1/4" | "1/2" | "—"),
+  attribute xp { datatype.non-negative.integer }?
+}
+
+dnd.traits = element traits {
+  element trait { dnd.paragraph+ }+
+}
+
+dnd.actions = element actions {
+  element action { dnd.paragraph+ }+
+}
+
+dnd.reactions = element reactions {
+  element action { dnd.paragraph+ }+
+}
+
+dnd.legendary-actions = element legendaryactions {
+  element action {
+    dnd.paragraph+,
+    attribute cost { datatype.positive.integer }
+  }+,
+  attribute available { datatype.positive.integer }
+}

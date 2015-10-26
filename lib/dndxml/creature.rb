@@ -1,6 +1,6 @@
 #
 # Author::      Jim Dovey,  jimdovey@mac.com
-# Description:: Implements the DnDXML::MagicItem class.
+# Description:: Implements the DnDXML::Creature class.
 #
 
 require 'rexml/document'

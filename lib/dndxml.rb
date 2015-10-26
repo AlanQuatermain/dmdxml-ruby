@@ -14,6 +14,9 @@ require 'ostruct'
 require 'rubygems'
 
 require 'ext/string'
+require 'ext/Symbol'
+require 'ext/Number'
+require 'ext/NilClass'
 
 # The DnDXML module implements a set of classes for dealing with DnD spell, item, and
 # creature data and their representation in an XML format.
@@ -51,6 +54,8 @@ module DnDXML
 	self.test_mode = ENV["DNDXML_TEST_MODE"].nil? ? false : ENV["DNDXML_TEST_MODE"].to_bool
 	
 	VERSION = '0.1'
+  
+  XML_SCHEMA = 'http://alanquatermain.me/dnd/schema'
 	
 	class InvalidXMLError < RuntimeError
 	end
@@ -59,6 +64,7 @@ end
 
 require 'dndxml/xmlwriter'
 require 'dndxml/xmlreader'
+require 'dndxml/description'
 require 'dndxml/spell'
 require 'dndxml/item'
 require 'dndxml/creature'

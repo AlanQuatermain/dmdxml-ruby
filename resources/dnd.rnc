@@ -112,7 +112,8 @@ dnd.lookup.row = element row {
   empty
 }
 
-dnd.lookup.column = element column { dnd.title & dnd.lookup.result+ }
+dnd.lookup.column = element column { dnd.lookup.column.attrlist & dnd.lookup.result+ }
+dnd.lookup.column.attrlist &= attribute title { text }
 dnd.lookup.result = (dnd.result.coinage | dnd.description | dnd.result.item | dnd.result.roll)
 
 dnd.result.coinage = element coinage {

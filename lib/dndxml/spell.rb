@@ -72,16 +72,16 @@ module DnDXML
 		attr_accessor :verbal, :somatic, :concentration, :ritual
 		
 		# String values
-		attr_accessor :title, :school, :duration
+		attr_accessor :title, :school, :materials
 		
 		# Integer values
 		attr_accessor :level
 		
 		# UnitType values
-		attr_accessor :casting_time, :range
+		attr_accessor :casting_time, :range, :duration
 		
 		# Array values
-		attr_accessor :classes, :materials
+		attr_accessor :classes
 		
 		# Description
 		attr_accessor :description
@@ -126,6 +126,8 @@ module DnDXML
 				when 'duration'
 					@duration = element.text
 					@concentration = element.attributes['concentration'].nil? ? false : element.attributes['concentration']
+				when 'materials'
+					@materials = element.text
 				when 'description'
 					@description = Description.new(element)
 				end

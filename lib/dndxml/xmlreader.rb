@@ -8,9 +8,11 @@ require "rexml/document"
 module DnDXML
   
   def read_xml_file(path)
-    doc = REXML::Document.new(File.read(path)) || return {}
-    return {} unless doc.root.name == 'document'
-    return {} unless doc.root.namespace == XML_SCHEMA
+		result = {}
+    doc = REXML::Document.new(File.read(path))
+		return result if doc.nil?
+    return result unless doc.root.name == 'document'
+    return result unless doc.root.namespace == XML_SCHEMA
     
     result = {}
     

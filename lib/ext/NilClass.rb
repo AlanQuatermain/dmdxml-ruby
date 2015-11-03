@@ -5,7 +5,7 @@
 
 class NilClass
 	
-	def isEmpty?
+	def empty?
 		true
 	end
 	

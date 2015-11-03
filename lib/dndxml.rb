@@ -9,7 +9,6 @@ $:.unshift File.dirname(__FILE__) # For use/testing when no gem is installed
 
 # core
 require 'fileutils'
-require 'ostruct'
 
 require 'rubygems'
 
@@ -58,6 +57,11 @@ module DnDXML
   XML_SCHEMA = 'http://alanquatermain.me/dnd/schema'
 	
 	class InvalidXMLError < RuntimeError
+		# attr_reader :error_info
+		#
+		# def initialize(info)
+		# 	@error_info = info
+		# end
 	end
 	
 end

@@ -75,22 +75,24 @@ module DnDXML
 	class LegendaryAction
 		attr_accessor :cost, :description
 		
-		def initialize(cost, description)
-			@cost = cost
-			if description.kindof? String
-				@description = [Paragraph.new(description)]
-			elsif description.kindof? Paragraph
-				@description = [description]
-			elsif description.kindof? Array
-				@description = description.filter { |p| p.kindof? Paragraph }
+		def initialize(*args)
+			@description = []
+			
+			case args[0]
+			when REXML::Node, REXML::Element
+				@cost = xmlnode.attributes['cost'].to_i
+				@description = xmlnode.elements.map { |e| Paragraph.new(e) }
+			when Numeric
+				@cost = args[0]
+				case args[1]
+				when String; @description = [Paragraph.new(args[1])]
+				when Paragraph; @description = [args[1]]
+				when Array; @description = args[1].filter { |p| p.kind_of? Paragraph }
+				else raise ArgumentError
+				end
 			else
-				@description = []
+				raise ArgumentError
 			end
-		end
-		
-		def initialize(xmlnode)
-			@cost = xmlnode.attributes['cost'].to_i
-			@description = xmlnode.elements.map { |e| Paragraph.new(e) }
 		end
 		
 		def to_s
@@ -115,7 +117,7 @@ module DnDXML
 		attr_accessor :type, :size, :alignment
 		
 		# String values
-		attr_accessor :title, :subtype, :challenge, :hit_point_roll, :armor_type, :hit_points
+		attr_accessor :title, :subtype, :hit_point_roll, :armor_type, :hit_points
 		
 		# Numeric values
 		attr_accessor :armor_class, :challenge, :xp, :legendary_action_count, :passive_perception
@@ -129,101 +131,24 @@ module DnDXML
 		# Description
 		attr_accessor :description
 		
-		def initialize
-			@skills = {}
-			@stats = {}
-			@saving_throws = {}
-			@speeds = {}
-			@senses = {}
-			@traits = []
-			@actions = []
-			@reactions = []
-			@legendary_actions = []
-			@damage_vulnerability = []
-			@damage_resistance = []
-			@damage_immunity = []
-			@condition_immunity = []
-		end
-		
-		def initialize(xmlnode)
-			raise ArgumentError.new("Input is not a <creature> element") unless xmlnode.node_type == :element and xmlnode.name == 'creature'
-			
-			@type = xmlnode.attributes['type'].to_sym
-			@size = xmlnode.attributes['size'].to_sym
-			@subtype = xmlnode.attributes['subtype']
-			raise InvalidXMLError.new "Unknown type '#{@type}'" unless CreatureType::ALL.contains?(@type)
-			raise InvalidXMLError.new "Unknown size '#{@size}'" unless CreatureSize::ALL.contains?(@size)
-			
-			xmlnode.elements.each do |element|
-				case element.name
-				when 'title'
-					@title = element.text
-				when 'alignment'
-					@alignment = element.text.to_sym
-					raise InvalidXMLError.new "Unknown alignment '#{element.text}'" unless Alignment::ALL.contains?(@alignment)
-				when 'ac'
-					@armor_class = element.text.to_i
-					raise InvalidXMLError.new "Invalid armor class '#{element.text}'" if @armor_class.nil?
-					@armor_type = element.attributes['type']
-				when 'hp'
-					@hit_points = element.text
-					raise InvalidXMLError.new "Invalid hit point maximum '#{element.text}'" if @hit_points.nil?
-					@hit_point_roll = element.attributes['roll']
-				when 'speed'
-					@speeds ||= {}
-					is_hover = @speeds[:hover].true?
-					@speeds[:walk] = element.text.to_i
-					@speeds[:fly] = element.attributes['fly'] if element.attributes.has_key? 'fly'
-					@speeds[:hover] = element.attributes['hover'] if element.attributes.has_key? 'hover'
-					@speeds[:swim] = element.attributes['swim'] if element.attributes.has_key? 'swim'
-					@speeds[:spiderclimb] = element.attributes['spiderclimb'] if element.attributes.has_key? 'spiderclimb'
-				when 'statblock'
-					@stats ||= {}
-					element.attributes.each { |name, value| @stats[name.to_sym] = value.to_i }
-				when 'saves'
-					@saving_throws ||= {}
-					element.attributes.each { |name, value| @saving_throws[name.to_sym__] = value.to_i }
-				when 'skill'
-					@skills ||= {}
-					@skills[element.attributes['name'].to_sym__] = element.text.to_i
-				when 'vulnerable'
-					@damage_vulnerability ||= []
-					@damage_vulnerability << element.text
-				when 'dmgresist'
-					@damage_resistance ||= []
-					@damage_resistance << element.text
-				when 'dmgimmune'
-					@damage_immunity ||= []
-					@damage_immunity << element.text
-				when 'statimmune'
-					@condition_immunity ||= []
-					@condition_immunity << element.text
-				when 'senses'
-					@passive_perception = element.attributes['perception'].to_i
-					@senses ||= {}
-					element.elements.each { |sub| @senses[sub.attributes['name']] = sub.text.to_i }
-				when 'language'
-					@languages ||= []
-					@languages << element.text
-				when 'challenge'
-					@challenge = element.text
-					@xp = element.attributes['xp'].to_i
-				when 'traits'
-					@traits ||= []
-					@traits << element.elements.map { |p| Paragraph.new(p) }
-				when 'actions'
-					@actions ||= []
-					@actions << element.elements.map { |p| Paragraph.new(p) }
-				when 'reactions'
-					@reactions ||= []
-					@reactions << element.elements.map { |p| Paragraph.new(p) }
-				when 'legendaryactions'
-					@legendary_actions ||= []
-					@legendary_actions << element.elements.map { |e| LegendaryAction.new(e) }
-					@legendary_action_count = element.attributes['available'].to_i
-				when 'description'
-					@description = Description.new(element)
-				end
+		def initialize(*args)
+			case args[0]
+			when REXML::Element
+				load_xml(args[0])
+			else
+				@skills = {}
+				@stats = {}
+				@saving_throws = {}
+				@speeds = {}
+				@senses = {}
+				@traits = []
+				@actions = []
+				@reactions = []
+				@legendary_actions = []
+				@damage_vulnerability = []
+				@damage_resistance = []
+				@damage_immunity = []
+				@condition_immunity = []
 			end
 		end
 		
@@ -249,7 +174,12 @@ module DnDXML
 			spd = root.add_element('speed').add_text(@speeds[:walk].to_s)
 			@speeds.each do |name, value|
 				next if name == :walk
-				spd.add_attribute(name.to_s, value.to_s)
+				if name == :hover
+					spd.add_attribute('fly', value.to_s)
+					spd.add_attribute('hover', 'true')
+				else
+					spd.add_attribute(name.to_s, value.to_s)
+				end
 			end
 			
 			stat = root.add_element 'statblock'
@@ -362,7 +292,7 @@ module DnDXML
 			if @languages.empty?
 				str << "—"
 			else
-				str << @languages.join ', '
+				str << @languages.join(', ')
 			end
 			str << "\n"
 			
@@ -400,6 +330,97 @@ module DnDXML
 				((@stats[key] - 10) / 2).floor
 			end
 			0
+		end
+		
+		protected
+		
+		def load_xml(xmlnode)
+			raise ArgumentError.new("Input is not a <creature> element") unless xmlnode.node_type == :element and xmlnode.name == 'creature'
+			
+			@type = xmlnode.attributes['type'].to_sym
+			@size = xmlnode.attributes['size'].to_sym
+			@subtype = xmlnode.attributes['subtype']
+			raise InvalidXMLError.new "Unknown type '#{@type}'" unless CreatureType::ALL.include?(@type)
+			raise InvalidXMLError.new "Unknown size '#{@size}'" unless CreatureSize::ALL.include?(@size)
+			
+			xmlnode.elements.each do |element|
+				case element.name
+				when 'title'
+					@title = element.text
+				when 'alignment'
+					@alignment = element.text.to_sym
+					raise InvalidXMLError.new "Unknown alignment '#{element.text}'" unless Alignment::ALL.include?(@alignment)
+				when 'ac'
+					@armor_class = element.text.to_i
+					raise InvalidXMLError.new "Invalid armor class '#{element.text}'" if @armor_class.nil?
+					@armor_type = element.attributes['type']
+				when 'hp'
+					@hit_points = element.text
+					raise InvalidXMLError.new "Invalid hit point maximum '#{element.text}'" if @hit_points.nil?
+					@hit_point_roll = element.attributes['roll']
+				when 'speed'
+					@speeds ||= {}
+					is_hover = element.attributes['hover']
+					fly = element.attributes['fly'] if element.attributes.has_key? 'fly'
+					@speeds[:walk] = element.text.to_i
+					@speeds[:swim] = element.attributes['swim'] if element.attributes.has_key? 'swim'
+					@speeds[:spiderclimb] = element.attributes['spiderclimb'] if element.attributes.has_key? 'spiderclimb'
+					
+					unless fly.nil?
+						if is_hover == 'true'
+							@speeds[:hover] = fly
+						else
+							@speeds[:fly] = fly
+						end
+					end
+				when 'statblock'
+					@stats ||= {}
+					element.attributes.each { |name, value| @stats[name.to_sym] = value.to_i }
+				when 'saves'
+					@saving_throws ||= {}
+					element.attributes.each { |name, value| @saving_throws[name.to_sym__] = value.to_i }
+				when 'skill'
+					@skills ||= {}
+					@skills[element.attributes['name'].to_sym__] = element.text.to_i
+				when 'vulnerable'
+					@damage_vulnerability ||= []
+					@damage_vulnerability << element.text
+				when 'dmgresist'
+					@damage_resistance ||= []
+					@damage_resistance << element.text
+				when 'dmgimmune'
+					@damage_immunity ||= []
+					@damage_immunity << element.text
+				when 'statimmune'
+					@condition_immunity ||= []
+					@condition_immunity << element.text
+				when 'senses'
+					@passive_perception = element.attributes['perception'].to_i
+					@senses ||= {}
+					element.elements.each { |sub| @senses[sub.attributes['name']] = sub.text.to_i }
+				when 'language'
+					@languages ||= []
+					@languages << element.text
+				when 'challenge'
+					@challenge = element.text
+					@xp = element.attributes['xp'].to_i
+				when 'traits'
+					@traits ||= []
+					@traits << element.elements.map { |p| Paragraph.new(p) }
+				when 'actions'
+					@actions ||= []
+					@actions << element.elements.map { |p| Paragraph.new(p) }
+				when 'reactions'
+					@reactions ||= []
+					@reactions << element.elements.map { |p| Paragraph.new(p) }
+				when 'legendaryactions'
+					@legendary_actions ||= []
+					@legendary_actions << element.elements.map { |e| LegendaryAction.new(e) }
+					@legendary_action_count = element.attributes['available'].to_i
+				when 'description'
+					@description = Description.new(element)
+				end
+			end
 		end
 		
 		private

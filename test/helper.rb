@@ -1,4 +1,4 @@
-require File.join(File.dirname(__FILE__), *%w[.. lib fcs])
+require File.join(File.dirname(__FILE__), *%w[.. lib dndxml])
 
 require 'rubygems'
 require 'test/unit'

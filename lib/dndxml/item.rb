@@ -43,31 +43,14 @@ module DnDXML
 		# Description
 		attr_accessor :description
 		
-		attr_reader :attunement_info
-		attr_reader :subtitle
-		
-		def initialize
-			@requires_attunement = true
-			@type = WONDROUS_ITEM
-			@rarity = RARE
-		end
-		
-		def initialize(xmlnode)
-			raise ArgumentError.new("Input is not an <item> element") unless xmlnode.node_type == :element and xmlnode.name == 'item'
-			
-			read_attributes xmlnode.attributes
-			
-			xmlnode.elements.each do |element|
-				case element.name
-				when 'title'
-					@title = element.text
-				when 'type'
-					@type = element.text.to_sym
-					raise InvalidXMLError.new "Unknown item type '#{element.text}'" unless ALL_TYPES.contains? @type
-					@subtype = element.attributes['otherInfo']
-				when 'description'
-					@description = Description.new(element)
-				end
+		def initialize(*args)
+			case args[0]
+			when REXML::Element
+				load_xml(args[0])
+			else
+				@requires_attunement = true
+				@type = WONDROUS_ITEM
+				@rarity = RARE
 			end
 		end
 		
@@ -80,6 +63,13 @@ module DnDXML
 				str << " by a #{@restrictions}" unless @restrictions.nil? or @restrictions.empty?
 				str << ")"
 			end
+			str
+		end
+		
+		def attunement_info
+			return nil unless @requires_attunement
+			str = "requires attunement"
+			str << " by a #{@restrictions}" unless @restrictions.nil? or @restrictions.empty?
 			str
 		end
 		
@@ -107,6 +97,25 @@ module DnDXML
 		
 		private
 		
+		def load_xml(xmlnode)
+			raise ArgumentError.new("Input is not an <item> element") unless xmlnode.node_type == :element and xmlnode.name == 'item'
+			
+			read_attributes xmlnode.attributes
+			
+			xmlnode.elements.each do |element|
+				case element.name
+				when 'title'
+					@title = element.text
+				when 'type'
+					@type = element.text.to_sym
+					raise InvalidXMLError.new "Unknown item type '#{element.text}'" unless ALL_TYPES.include? @type
+					@subtype = element.attributes['otherInfo']
+				when 'description'
+					@description = Description.new(element)
+				end
+			end
+		end
+		
 		def read_attributes(attrs)
 			raise InvalidXMLError.new "<item> element MUST have a 'rarity' attribute" if attrs['rarity'].nil?
 			
@@ -115,7 +124,7 @@ module DnDXML
 			@requires_attunement = attn.nil? ? false : attn.to_bool
 			@restrictions = attrs['restrictions']
 			@rarity = attrs['rarity'].to_sym
-			raise InvalidXMLError.new "<item> element 'rarity' attribute has unrecognised value '#{@rarity.to_s}'" unless RARITIES.contains? @rarity
+			raise InvalidXMLError.new "<item> element 'rarity' attribute has unrecognised value '#{@rarity.to_s}'" unless RARITIES.include? @rarity
 		end
 		
 	end

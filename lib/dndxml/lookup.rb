@@ -7,6 +7,28 @@ require 'rexml/document'
 
 module DnDXML
   
+  class RandomRoll
+    
+    attr_accessor :die, :quantity, :multiplier
+    
+    def initialize(die, quantity, multiplier)
+      @die = die
+      @quantity = quantity || 1
+      @multiplier = multiplier || 1
+    end
+    
+    def to_s
+      @multiplier > 1 ? "#{quantity > 1 ? @quantity : ''}d#{die}\u00D7#{@multiplier}" : "#{quantity > 1 ? @quantity : ''}d#{die}"
+    end
+    
+    def add_to_xml_element(elem)
+      elem.add_attribute 'die', @die.to_s
+      elem.add_attribute 'quantity', @quantity.to_s if @quantity > 1
+      elem.add_attribute 'multiplier', @multiplier.to_s if @multiplier > 1
+    end
+    
+  end
+  
   class LookupTable
     
     # Numeric attributes
@@ -21,16 +43,24 @@ module DnDXML
     # Description
     attr_accessor :description
     
-    def initialize
-      @die = 100
-      @rows = []
-      @columns = []
+    def initialize(*args)
+			case args[0]
+			when REXML::Element
+				load_xml(args[0])
+			else
+	      @die = 100
+	      @rows = []
+	      @columns = []
+			end
     end
+		
+		protected
     
-    def initialize(xmlnode)
+    def load_xml(xmlnode)
       raise ArgumentError.new("Node is not a <lookup> element") unless xmlnode.type == :element and xmlnode.name == 'lookup'
       
-      @die = xmlnode.attributes['die'].to_i || raise InvalidXMLError.new "<lookup> element must have a 'die' attribute with a numeric value"
+      @die = xmlnode.attributes['die'].to_i
+			raise InvalidXMLError.new("<lookup> element must have a 'die' attribute with a numeric value") if @die.nil?
       
       xmlnode.elements.each do |element|
         case element.name
@@ -40,8 +70,10 @@ module DnDXML
           @description = Description.new(element)
         when 'row'
           @rows ||= []
-          rangeStart = element.attributes['startRange'].to_i || raise InvalidXMLError.new "<row> element must have a 'startRage' attribute with a numeric value"
-          rangeEnd = element.attributes['endRange'].to_i || raise InvalidXMLError.new "<row> element must have an 'endRange' attribute with a numeric value"
+          rangeStart = element.attributes['startRange'].to_i
+					raise InvalidXMLError.new("<row> element must have a 'startRage' attribute with a numeric value") if rangeStart.nil?
+          rangeEnd = element.attributes['endRange'].to_i
+					raise InvalidXMLError.new("<row> element must have an 'endRange' attribute with a numeric value") if rangeEnd.nil?
           @rows << rangeStart..rangeEnd+1
         when 'column'
           @columns ||= []
@@ -57,14 +89,22 @@ module DnDXML
     attr_accessor :title
     attr_accessor :results
     
-    def initialize
-      @results = []
+    def initialize(*args)
+			case args[0]
+			when REXML::Element
+				load_xml(args[0])
+			else
+				@results = []
+			end
     end
+		
+		protected
     
-    def initialize(xmlnode)
+    def load_xml(xmlnode)
       raise ArgumentError.new("Node is not a <column> element") unless xmlnode.type == :element and xmlnode.name == 'column'
       
-      @title = xmlnode.attributes['title'] || raise InvalidXMLError.new "<column> element must have a 'title' attribute"
+      @title = xmlnode.attributes['title']
+			raise InvalidXMLError.new("<column> element must have a 'title' attribute") if @title.nil?
       @results = []
       
       xmlnode.elements.each do |element|
@@ -78,7 +118,7 @@ module DnDXML
         when 'description'
           @results << DescriptionResult.new(element)
         else
-          raise InvalidXMLError.new "Unexpected child element '#{element.name}' encountered while parsing <column> element tree"
+          raise InvalidXMLError.new("Unexpected child element '#{element.name}' encountered while parsing <column> element tree")
         end
       end
     end
@@ -103,31 +143,24 @@ module DnDXML
     attr_accessor :denomination
     attr_accessor :preset_amount
     attr_accessor :random_roll
-    
-    def initialize(demonination, preset)
-      self.type = :coinage
-      @denomination = denomination
-      @preset_amount = preset
-    end
-    
-    def initialize(denomination, roll)
-      self.type = :coinage
-      @denomination = denomination
-      @random_roll = roll
-    end
-    
-    def initialize(xmlnode)
-      self.type = :coinage
-      @denomination = xmlnode.attributes['denomination'] || raise InvalidXMLError.new "<coinage> element must have a 'denomination' attribute"
-      if xmlnode.attributes['amount']
-        @preset_amount = xmlnode.attributes['amount'].to_i
-      else
-        die = xmlnode.attributes['die'].to_i
-        quant = xmlnode.attributes['quantity'].to_i
-        mult = xmlnode.attributes['mult'].to_i
-        @random_roll = RandomRoll.new(die, quant, mult)
-      end
-    end
+		
+		def initialize
+			@type = :coinage
+			
+			case args[0]
+			when REXML::Element
+				load_xml(args[0])
+			when String
+				@denomination = args[0]
+				case args[1]
+				when Numeric; @preset_amount = args[1]
+				when RandomRoll; @random_roll = args[1]
+				else raise ArgumentError
+				end
+			else
+				raise ArgumentError
+			end
+		end
     
     def to_s
       "#{@preset_amount || @random_roll} #{denomination}"
@@ -140,6 +173,22 @@ module DnDXML
       @random_roll.add_to_xml_element(element) unless @random_roll.nil?
       element
     end
+		
+		protected
+    
+    def load_xml(xmlnode)
+      self.type = :coinage
+      @denomination = xmlnode.attributes['denomination']
+			raise InvalidXMLError.new("<coinage> element must have a 'denomination' attribute") if @denomination.nil?
+      if xmlnode.attributes['amount']
+        @preset_amount = xmlnode.attributes['amount'].to_i
+      else
+        die = xmlnode.attributes['die'].to_i
+        quant = xmlnode.attributes['quantity'].to_i
+        mult = xmlnode.attributes['mult'].to_i
+        @random_roll = RandomRoll.new(die, quant, mult)
+      end
+    end
     
   end
   
@@ -147,14 +196,14 @@ module DnDXML
     
     attr_accessor :item_name
     
-    def initialize(name)
-      self.type = :item
-      @item_name = name
-    end
-    
-    def initialize(xmlnode)
-      self.type = :item
-      @name = xmlnode.attributes['name']
+    def initialize(*args)
+			@type = :item
+			
+			case args[0]
+			when String; @item_name = args[0]
+			when REXML::Element; @name = args[0].attributes['name']
+			else raise ArgumentError
+			end
     end
     
     def to_s
@@ -172,20 +221,22 @@ module DnDXML
   class LookupResult < Result
     
     attr_accessor :name, :die, :quantity
-    
-    def initialize(name, die, quantity)
-      self.type = :lookup
-      @name = name
-      @die = die
-      @quantity = quantity || 1
-    end
-    
-    def initialize(xmlnode)
-      self.type = :lookup
-      @name = xmlnode.attributes['name']
-      @die = xmlnode.attributes['die'].to_i
-      @quantity = xmlnode.attributes['quantity'].to_s || 1
-    end
+		
+		def initialize(*args)
+			@type = :lookup
+			
+			case args[0]
+			when String
+				raise ArgumentError unless args.count > 1
+				@name = args[0]
+				@die = args[1].to_i
+				@quantity = args[2].to_i || 1
+			when REXML::Element
+	      @name = args[0].attributes['name']
+	      @die = args[0].attributes['die'].to_i
+	      @quantity = args[0].attributes['quantity'].to_i || 1
+			end
+		end
     
     def to_s
       "Roll #{@quantity > 1 ? @quantity : ''}d#{die} times on #{name}"
@@ -204,13 +255,11 @@ module DnDXML
     attr_accessor :description
     
     def initialize(description)
-      self.type = :description
-      @description = description
-    end
-    
-    def initialize(xmlnode)
-      self.type = :description
-      @description = Description.new(xmlnode)
+      @type = :description
+			case args[0]
+			when Description; @description = args[0]
+			when REXML::Element; @description = Description.new(args[0])
+			end
     end
     
     def to_s
@@ -219,28 +268,6 @@ module DnDXML
     
     def to_xml
       @description.to_xml
-    end
-    
-  end
-  
-  class RandomRoll
-    
-    attr_accessor :die, :quantity, :multiplier
-    
-    def initialize(die, quantity, multiplier)
-      @die = die
-      @quantity = quantity || 1
-      @multiplier = multiplier || 1
-    end
-    
-    def to_s
-      @multiplier > 1 ? "#{quantity > 1 @quantity : ''}d#{die}\u00D7#{@multiplier}" : "#{quantity > 1 ? @quantity : ''}d#{die}"
-    end
-    
-    def add_to_xml_element(elem)
-      elem.add_attribute 'die', @die.to_s
-      elem.add_attribute 'quantity', @quantity.to_s if @quantity > 1
-      elem.add_attribute 'multiplier', @multiplier.to_s if @multiplier > 1
     end
     
   end

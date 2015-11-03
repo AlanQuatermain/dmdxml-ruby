@@ -10,12 +10,12 @@ Hoe.spec('dndxml') do
 	@summary = 'Ruby library for processing DnD XML data.'
 	@version = DnDXML::VERSION
 	@url = File.read_utf('README.txt').match(/(http:\/\/.+)\s/)[1].strip
-	@extra_deps << ['mocha', '~> 0.9.8']
+	@extra_deps << ['mocha', '~> 1.1.0']
 end
 
 desc "Open an irb session preloaded with this library"
 task :console do
-	sh "irb -rubygems -r ./lib/dndxml.lib"
+	sh "irb -rubygems -r ./lib/dndxml.rb"
 end
 
 task :default => [:test_units]

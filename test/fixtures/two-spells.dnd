@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document xmlns="http://alanquatermain.me/dnd/schema" version="0.1">
+	<spells>
+		<spell verbal="true" somatic="true">
+			<title>Abi-Dalzim’s Horrid Wilting</title>
+			<level>8</level>
+			<school>necromancy</school>
+			<class>sorcerer</class>
+			<class>wizard</class>
+			<castingtime unit="action">1</castingtime>
+			<range unit="foot">150</range>
+			<duration>instantaneous</duration>
+			<materials>A bit of sponge</materials>
+			<description>
+				<p>You draw the moisture from every creature in a 30-foot cube centered on a point you choose within range. Each creature in that area must make a Constitution saving throw. Constructs and undead aren’t affected, and plants and water elementals make this saving throw with disadvantage. A creature takes 10d8 necrotic damage on a failed save, or half as much damage on a successful one.</p>
+			</description>
+		</spell>
+		<spell verbal="true" somatic="true" ritual="true">
+			<title>Alarm</title>
+			<level>1</level>
+			<school>abjuration</school>
+			<class>ranger</class>
+			<class>wizard</class>
+			<castingtime unit="minute">1</castingtime>
+			<range unit="foot">30</range>
+			<duration unit="hour">8</duration>
+			<materials>A tiny bell and a piece of fine silver wire</materials>
+			<description>
+				<p>You set an alarm against unwanted intrusion. Choose a door, a window, or an area within range that is no larger than a 20-foot cube. Until the spell ends, an alarm alerts you whenever a Tiny or larger creature touches or enters the warded area. When you cast the spell, you can designate creatures that won’t set off the alarm. You also choose whether the alarm is mental or audible.</p>
+				<p>A mental alarm alerts you with a ping in your mind if you are within 1 mile of the warded area. This ping awakens you if you are sleeping.</p>
+				<p>An audible alarm produces the sound of a hand bell for 10 seconds within 60 feet.</p>
+			</description>
+		</spell>
+	</spells>
+</document>

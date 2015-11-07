@@ -2,8 +2,16 @@ require File.join(File.dirname(__FILE__), 'helper')
 
 class TestSpells < Test::Unit::TestCase
 	
-	def setup
-		@simple_data = read_xml_file fixture_path('simple-spell.dnd')
+	def read_simple_spell
+		read_xml_file fixture_path('simple-spell.dnd')
+	end
+	
+	def read_double_spell
+		read_xml_file fixture_path('two-spells.dnd')
+	end
+	
+	def read_ritual_spell
+		read_xml_file fixture_path('ritual-spell.dnd')
 	end
 	
 	def test_spell_creation_fails_with_wrong_element
@@ -15,18 +23,18 @@ class TestSpells < Test::Unit::TestCase
 		spell = Spell.new
 		assert_not_nil spell
 		
-		assert_equal spell.verbal, false
-		assert_equal spell.somatic, false
-		assert_equal spell.concentration, false
-		assert_equal spell.ritual, false
-		assert_equal spell.school, SpellSchool::ABJURATION
-		assert_equal spell.level, 0
+		assert_equal false, spell.verbal
+		assert_equal false, spell.somatic
+		assert_equal false, spell.concentration
+		assert_equal false, spell.ritual
+		assert_equal SpellSchool::ABJURATION, spell.school
+		assert_equal 0, spell.level
 		
-		assert_equal spell.casting_time.value, 1
-		assert_equal spell.casting_time.unit, 'action'
+		assert_equal 1, spell.casting_time.value
+		assert_equal 'action', spell.casting_time.unit
 		
-		assert_equal spell.range.value, 'touch'
-		assert_equal spell.duration.value, 'instantaneous'
+		assert_equal 'touch', spell.range.value
+		assert_equal 'instantaneous', spell.duration.value
 	end
 	
 	def make_test_spell
@@ -66,36 +74,67 @@ It is rather lovely.
 	end
 	
 	def test_simple_spell_loads
-		assert_not_empty @simple_data
+		assert_not_empty read_simple_spell
 	end
 	
 	def test_simple_spell_content
-		spell_list = @simple_data[:spells]
-		assert_equal spell_list.count, 1
+		spell_list = read_simple_spell[:spells]
+		assert_equal 1, spell_list.count
+		
+		spell_list = read_double_spell[:spells]
+		assert_equal 2, spell_list.count
 	end
 	
 	def test_simple_spell_definition
-		spell = @simple_data[:spells].first
+		spell = read_simple_spell[:spells].first
 		assert_not_nil spell
 		
-		assert_equal spell.title, "Abi-Dalzim’s Horrid Wilting"
-		assert_equal spell.level, 8
-		assert_equal spell.school, SpellSchool::NECROMANCY
+		assert_equal "Abi-Dalzim’s Horrid Wilting", spell.title
+		assert_equal 8, spell.level
+		assert_equal SpellSchool::NECROMANCY, spell.school
 		
 		assert spell.verbal
 		assert spell.somatic
-		assert_equal spell.concentration, false
-		assert_equal spell.ritual, false
+		assert_equal false, spell.concentration
+		assert_equal false, spell.ritual
 		
-		assert_equal spell.materials, 'A bit of sponge'
-		assert_equal spell.duration.to_s, 'instantaneous'
-		assert_equal spell.casting_time.to_s, '1 action'
-		assert_equal spell.range.to_s, '150 feet'
+		assert_equal 'A bit of sponge', spell.materials
+		assert_equal 'instantaneous', spell.duration.to_s
+		assert_equal '1 action', spell.casting_time.to_s
+		assert_equal '150 feet', spell.range.to_s
 		
-		assert_equal spell.classes.count, 2
+		assert_equal 2, spell.classes.count
 		assert spell.classes.include?(SpellClass::SORCERER)
 		assert spell.classes.include?(SpellClass::WIZARD)
 		assert spell.description.to_s.start_with?('You draw the moisture from')
+	end
+	
+	def test_ritual_loads
+		assert_not_empty read_ritual_spell
+	end
+	
+	def test_ritual_spell_definition
+		spell = read_ritual_spell[:spells].first
+		assert_not_nil spell
+		
+		assert_equal 'Alarm', spell.title
+		assert_equal 1, spell.level
+		assert_equal SpellSchool::ABJURATION, spell.school
+		
+		assert spell.verbal
+		assert spell.somatic
+		assert spell.ritual
+		assert !spell.concentration
+		
+		assert_equal 'A tiny bell and a piece of fine silver wire', spell.materials
+		assert_equal '1 minute', spell.casting_time.to_s
+		assert_equal '30 feet', spell.range.to_s
+		assert_equal '8 hours', spell.duration.to_s
+		
+		assert_equal 2, spell.classes.count
+		assert spell.classes.include?(SpellClass::RANGER)
+		assert spell.classes.include?(SpellClass::WIZARD)
+		assert spell.description.to_s.start_with?('You set an alarm against unwanted intrusion.')
 	end
 	
 end

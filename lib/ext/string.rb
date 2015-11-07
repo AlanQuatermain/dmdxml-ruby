@@ -31,4 +31,11 @@ class String
 		tr(' ', '_').to_sym
 	end
 	
+	#
+	# Tests whether a string is a representation of a number.
+	#
+	def number?
+		true if Float(string) rescue false
+	end
+	
 end

@@ -45,8 +45,7 @@ module DnDXML
 				case args[0]
 				when REXML::Element
 					text = args[0].text
-					num = text.to_i
-					@value = num.nil? ? text : num
+					@value = text.number? ? text.to_i : text
 					@unit = args[0].attributes['unit']
 				when Numeric
 					raise ArgumentError if args[1].nil?
@@ -176,7 +175,7 @@ module DnDXML
 				when 'range'
 					@range = UnitType.new(element)
 				when 'duration'
-					@duration = element.text
+					@duration = UnitType.new(element)
 					@concentration = element.attributes['concentration'].nil? ? false : element.attributes['concentration']
 				when 'materials'
 					@materials = element.text
